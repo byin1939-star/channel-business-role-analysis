@@ -1,0 +1,67 @@
+flowchart TB
+  classDef strategy fill:#0f2f4a,stroke:#5eb3ff,color:#e8f4ff,stroke-width:1px
+  classDef channel fill:#123824,stroke:#66d19e,color:#f1fff7,stroke-width:1px
+  classDef business fill:#3a2b12,stroke:#f2b84b,color:#fff7e6,stroke-width:1px
+  classDef support fill:#282f3a,stroke:#9aa8b6,color:#eef2f7,stroke-width:1px
+  classDef external fill:#31243d,stroke:#b08cff,color:#fff3ff,stroke-width:1px
+
+  subgraph S["战略层：目标、资源、决策"]
+    A["公司管理层"]:::strategy
+    B["销售负责人"]:::strategy
+    C["渠道负责人"]:::channel
+    D["商务负责人"]:::business
+  end
+
+  subgraph M["管理层：策略拆解与跨部门协同"]
+    CM["渠道经理 / 渠道BD"]:::channel
+    BM["商务经理 / 商务支持"]:::business
+    MK["市场部"]:::support
+    PR["产品部"]:::support
+    SE["解决方案 / 售前"]:::support
+    CS["客户成功 / 交付"]:::support
+    FI["财务"]:::support
+    LA["法务"]:::support
+  end
+
+  subgraph E["执行层：线索、报价、签约、回款"]
+    CH1["渠道拓展"]:::channel
+    CH2["伙伴赋能"]:::channel
+    CH3["渠道运营 / 数据"]:::channel
+    BS1["客户转化"]:::business
+    BS2["报价支持"]:::business
+    BS3["合同签约"]:::business
+    BS4["回款跟进"]:::business
+  end
+
+  subgraph X["外部生态层：伙伴与客户"]
+    XP["外部渠道伙伴"]:::external
+    XD["代理商 / 经销商"]:::external
+    KC["重点客户"]:::external
+  end
+
+  A -->|经营目标 / 预算边界 / 风险偏好| B
+  B -->|收入目标 / 区域策略 / 重点客户策略| C
+  B -->|回款目标 / 客户结构 / 报价授权| D
+  C -->|渠道政策 / 伙伴分级 / 投放策略| CM
+  D -->|客户转化策略 / 报价规则 / 合同节奏| BM
+  CM -->|渠道线索 / 伙伴资源 / 成本数据| BM
+  BM -->|商机质量反馈 / 客户需求 / 回款预测| CM
+  MK -->|线索来源 / 品牌素材 / 活动节奏| CM
+  PR -->|产品版本 / 定价边界 / 交付能力| BM
+  SE -->|方案配置 / 技术澄清 / 标书支持| BM
+  BM -->|合同条款 / 特批申请| LA
+  BM -->|开票 / 到账 / 应收账龄| FI
+  CS -->|交付反馈 / 续费风险 / 客户满意度| BM
+  CM --> CH1 -->|伙伴招募 / 资源置换| XP
+  CM --> CH2 -->|培训认证 / 政策宣导| XD
+  CM --> CH3 -->|新增 / 消耗 / 充值 / ROI| C
+  BM --> BS1 -->|商机推进 / 客户分层| KC
+  BM --> BS2 -->|报价测算 / 折扣授权| FI
+  BM --> BS3 -->|合同审核 / 签约留痕| LA
+  BM --> BS4 -->|回款节点 / 逾期预警| FI
+  XP -->|线索 / 流量 / 客户触达| CH1
+  XD -->|区域覆盖 / 项目报备| CH2
+  KC -->|需求 / 预算 / 续费意向| BS1
+  CS -->|客户使用反馈| PR
+  FI -->|回款状态反馈| D
+  LA -->|合规风险反馈| D
