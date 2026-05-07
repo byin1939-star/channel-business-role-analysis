@@ -1,0 +1,24 @@
+flowchart LR
+  classDef input fill:#1a2430,stroke:#9aa8b6,color:#eef2f7
+  classDef channel fill:#123824,stroke:#66d19e,color:#f1fff7
+  classDef business fill:#3a2b12,stroke:#f2b84b,color:#fff7e6
+  classDef risk fill:#3d1f24,stroke:#ff7d7d,color:#fff0f0
+  classDef value fill:#0f2f4a,stroke:#5eb3ff,color:#e8f4ff
+
+  A["数据源层<br/>花名册 / BI / Google Sheets / Telegram / 会议转写 / Agent闭环"]:::input
+  C1["渠道输入指标<br/>新增、消耗、充值、ROI、伙伴活跃、异常数"]:::channel
+  B1["商务结果指标<br/>目标、回款、订单、续费、新增、客单价"]:::business
+  P1["过程动作指标<br/>商机流转、报价时效、合同周期、回款节点、日报/复盘"]:::input
+  R1["风险控制指标<br/>特批报价、合同风险、逾期账款、伙伴异常、数据缺口"]:::risk
+  A --> C1
+  A --> B1
+  A --> P1
+  A --> R1
+  C1 -->|判断流量质量和渠道供给| C2["渠道动作<br/>伙伴分级、投放复盘、低ROI渠道暂停、渠道赋能"]:::channel
+  B1 -->|拆收入缺口和客户结构| B2["商务动作<br/>客户分层、续费清单、报价策略、回款推进"]:::business
+  P1 -->|把职责落到人和截止时间| P2["协同动作<br/>售前方案、产品澄清、财法审核、交付反馈"]:::input
+  R1 -->|降低损失和审计风险| R2["风控动作<br/>合同留痕、应收预警、特批复核、异常复盘"]:::risk
+  C2 --> V["组织价值<br/>收入增长更可预测、渠道质量可解释、客户转化可复制、管理岗位可备份"]:::value
+  B2 --> V
+  P2 --> V
+  R2 --> V
