@@ -39,6 +39,19 @@
     .diagram-large .mermaid svg { max-width:none !important; width:2100px !important; height:auto !important; }
     .diagram-medium .mermaid svg { max-width:none !important; width:1680px !important; height:auto !important; }
     textarea { width:100%; min-height:220px; background:#0d1117; border:1px solid var(--line); color:#d9e8f6; border-radius:8px; padding:12px; font:12px/1.5 Consolas,Monaco,monospace; resize:vertical; }
+    .edit-toggle.active { border-color:var(--green); background:#123626; color:#d6ffe8; font-weight:700; }
+    .edit-status { color:var(--green); font-size:12px; min-width:70px; }
+    body.editing [data-editable="true"],
+    body.editing [data-table-editable="true"] { cursor:text; outline:1px dashed rgba(94,179,255,.58); outline-offset:2px; border-radius:4px; }
+    body.editing [data-editable="true"]:focus,
+    body.editing [data-table-editable="true"]:focus { outline:2px solid var(--blue); background:#10253a; }
+    body.editing section { box-shadow:0 0 0 1px rgba(94,179,255,.16) inset; }
+    body.editing .mermaid .node { cursor:pointer; }
+    body.editing .mermaid .node:hover rect,
+    body.editing .mermaid .node:hover polygon,
+    body.editing .mermaid .node:hover circle,
+    body.editing .mermaid .node:hover ellipse { stroke:var(--blue) !important; stroke-width:3px !important; filter:drop-shadow(0 0 7px rgba(94,179,255,.55)); }
+    .diagram-tip { color:var(--muted); font-size:12px; }
     details.code-panel { margin-top:10px; }
     details.code-panel summary { cursor:pointer; color:var(--blue); font-weight:600; margin-bottom:8px; }
     .table-actions { display:flex; gap:10px; align-items:center; margin:10px 0; color:var(--muted); font-size:12px; }
@@ -59,17 +72,20 @@
 <header>
   <div>
     <h1>渠道与商务管理岗位分析材料</h1>
-    <div class="sub">内部评审半成品交付物 · 生成时间 2026-05-07 18:25 · 来源：HRBP 看板整理版 / 最新花名册口径 / BI / Google Sheets / 会议转写 / 工作Agent</div>
+    <div class="sub">内部评审半成品交付物 · 生成时间 2026-05-07 18:39 · 来源：HRBP 看板整理版 / 最新花名册口径 / BI / Google Sheets / 会议转写 / 工作Agent</div>
   </div>
   <div class="toolbar">
+    <button id="edit-toggle" class="edit-toggle" onclick="toggleEditMode()">开启编辑</button>
+    <button onclick="downloadEditedHtml()">下载当前编辑版 HTML</button>
     <button onclick="window.print()">打印/PDF</button>
+    <span id="edit-status" class="edit-status"></span>
   </div>
 </header>
 <main>
   <div class="export-bar">
     <div>
       <b>直接导出</b>
-      <div class="sub">不用复制：可直接下载 Excel、Mermaid 源码、Markdown 和完整素材包。</div>
+      <div class="sub">不用复制：可直接下载 Excel、Mermaid 源码、Markdown 和完整素材包。需要改字时先点右上角“开启编辑”。</div>
     </div>
     <div class="export-links">
       <a class="btn download primary" download href="role_analysis_exports/channel_business_role_analysis_assets.zip">下载素材包 ZIP</a>
@@ -108,10 +124,12 @@
     <h2>2. 模块 1：管理岗位上下游关系图</h2>
     <p>图的结构采用“战略层-管理层-执行层-外部生态层”。重点不是汇报线，而是四种真实业务流：信息流、业务流、决策流、反馈流。渠道节点用绿色，商务节点用金色，支持部门用灰色，外部生态用紫色。</p>
     <div class="table-actions">
+      <button onclick="enableDiagramEditing('upstream-diagram')">图上双击改字</button>
       <button onclick="downloadSvg('upstream-diagram','management_relationship.svg')">下载关系图 SVG</button>
       <a class="btn download" download href="role_analysis_exports/management_relationship.mmd">下载关系图 Mermaid</a>
+      <span class="diagram-tip">打开后双击节点可改文字；增删节点/改连线用下方 Mermaid 源码。</span>
     </div>
-    <div class="mermaid-wrap diagram-large"><div id="upstream-diagram" class="mermaid">flowchart TB
+    <div class="mermaid-wrap diagram-large"><div id="upstream-diagram" class="mermaid" data-code-id="upstream-code">flowchart TB
   classDef strategy fill:#0f2f4a,stroke:#5eb3ff,color:#e8f4ff,stroke-width:1px
   classDef channel fill:#123824,stroke:#66d19e,color:#f1fff7,stroke-width:1px
   classDef business fill:#3a2b12,stroke:#f2b84b,color:#fff7e6,stroke-width:1px
@@ -182,6 +200,8 @@
       <summary>展开 Mermaid 源码</summary>
       <div>
         <button onclick="copyText('upstream-code')">复制 Mermaid</button>
+        <button onclick="renderMermaidFromTextarea('upstream-diagram','upstream-code')">重新渲染图</button>
+        <button onclick="downloadText('upstream-code','management_relationship_edited.mmd')">下载当前 Mermaid</button>
         <a class="btn download" download href="role_analysis_exports/management_relationship.mmd">直接下载 .mmd</a>
         <textarea id="upstream-code">flowchart TB
   classDef strategy fill:#0f2f4a,stroke:#5eb3ff,color:#e8f4ff,stroke-width:1px
@@ -258,10 +278,12 @@
     <h2>3. 模块 2：指标、业务、价值逻辑图</h2>
     <p>逻辑链路按“数据源层-指标层-业务动作层-组织价值层”展开。所有指标都必须回答三个问题：业务含义是什么、哪个岗位负责、触发什么管理动作。</p>
     <div class="table-actions">
+      <button onclick="enableDiagramEditing('logic-diagram')">图上双击改字</button>
       <button onclick="downloadSvg('logic-diagram','metric_business_value_logic.svg')">下载逻辑图 SVG</button>
       <a class="btn download" download href="role_analysis_exports/metric_business_value_logic.mmd">下载逻辑图 Mermaid</a>
+      <span class="diagram-tip">打开后双击节点可改文字；增删节点/改连线用下方 Mermaid 源码。</span>
     </div>
-    <div class="mermaid-wrap diagram-medium"><div id="logic-diagram" class="mermaid">flowchart LR
+    <div class="mermaid-wrap diagram-medium"><div id="logic-diagram" class="mermaid" data-code-id="logic-code">flowchart LR
   classDef input fill:#1a2430,stroke:#9aa8b6,color:#eef2f7
   classDef channel fill:#123824,stroke:#66d19e,color:#f1fff7
   classDef business fill:#3a2b12,stroke:#f2b84b,color:#fff7e6
@@ -289,6 +311,8 @@
       <summary>展开 Mermaid 源码</summary>
       <div>
         <button onclick="copyText('logic-code')">复制 Mermaid</button>
+        <button onclick="renderMermaidFromTextarea('logic-diagram','logic-code')">重新渲染图</button>
+        <button onclick="downloadText('logic-code','metric_business_value_logic_edited.mmd')">下载当前 Mermaid</button>
         <a class="btn download" download href="role_analysis_exports/metric_business_value_logic.mmd">直接下载 .mmd</a>
         <textarea id="logic-code">flowchart LR
   classDef input fill:#1a2430,stroke:#9aa8b6,color:#eef2f7
@@ -319,9 +343,10 @@
     
     <div class="table-actions">
       <button onclick="copyCsv('metric-table')">复制为 CSV</button>
-      <span>表格单元格可直接在浏览器里改字，再复制到 Excel / 飞书。</span>
+      <button onclick="downloadTableCsv('metric-table','metric-table.csv')">下载当前表格 CSV</button>
+      <span>先点顶部“开启编辑”，再点单元格改字；复制/下载会读取当前页面内容。</span>
     </div>
-    <table id="metric-table"><thead><tr><th>指标名称</th><th>指标类别</th><th>业务含义</th><th>负责岗位</th><th>数据来源</th><th>计算方式</th><th>管理动作</th><th>对应价值</th></tr></thead><tbody><tr><td contenteditable='true'>商务月度回款完成率</td><td contenteditable='true'>结果指标</td><td contenteditable='true'>衡量商务目标达成进度，避免只看订单数不看金额。</td><td contenteditable='true'>商务负责人 / 商务经理</td><td contenteditable='true'>官方BI订单；5月BI未更新时用和优每日平台日报估算并标注</td><td contenteditable='true'>本月回款金额 / 月度目标</td><td contenteditable='true'>拆到客户、产品、预计回款日；低完成人员每周一张缺口表。</td><td contenteditable='true'>收入预测更稳定，管理层能看到缺口来源。</td></tr><tr><td contenteditable='true'>个人KPI缺口金额</td><td contenteditable='true'>过程+结果</td><td contenteditable='true'>定位谁拖缺口，以及缺口来自新增、续费还是大客户延期。</td><td contenteditable='true'>商务负责人 / HRBP</td><td contenteditable='true'>BI个人目标、订单明细、商务例会纪要</td><td contenteditable='true'>个人目标 - 已回款金额</td><td contenteditable='true'>对缺口人员拉客户清单、报价状态、预计回款日和主管支持项。</td><td contenteditable='true'>从泛泛催业绩转为具体客户推进。</td></tr><tr><td contenteditable='true'>渠道新增用户数</td><td contenteditable='true'>渠道输入</td><td contenteditable='true'>衡量渠道供给量，不等同于有效增长。</td><td contenteditable='true'>渠道负责人 / 渠道经理</td><td contenteditable='true'>渠道每日业绩 Google Sheet、渠道日报</td><td contenteditable='true'>各渠道新增用户求和</td><td contenteditable='true'>按渠道来源、负责人、产品分层，低质量新增进入复盘。</td><td contenteditable='true'>保证商务有足够线索池，同时避免低质流量堆量。</td></tr><tr><td contenteditable='true'>渠道充值/消耗比</td><td contenteditable='true'>质量指标</td><td contenteditable='true'>衡量渠道投放质量和回收效率，是渠道管理核心健康度指标。</td><td contenteditable='true'>渠道负责人 / 渠道运营</td><td contenteditable='true'>收费APP、免费盒子、渠道每日投放表</td><td contenteditable='true'>充值金额 / 投放消耗</td><td contenteditable='true'>低于阈值的渠道暂停加量，检查素材、落地页、到账和统计口径。</td><td contenteditable='true'>降低无效消耗，提高渠道预算效率。</td></tr><tr><td contenteditable='true'>伙伴活跃与贡献</td><td contenteditable='true'>生态指标</td><td contenteditable='true'>判断外部渠道伙伴是否持续贡献有效商机。</td><td contenteditable='true'>渠道经理 / 渠道BD</td><td contenteditable='true'>伙伴报备、链接同步群、渠道合作记录</td><td contenteditable='true'>活跃伙伴数、有效商机数、成交额、异常次数</td><td contenteditable='true'>做伙伴分级，A类给政策和资源，C类限期激活或淘汰。</td><td contenteditable='true'>渠道生态从人情维护变成经营资产管理。</td></tr><tr><td contenteditable='true'>商机流转及时率</td><td contenteditable='true'>协同过程</td><td contenteditable='true'>衡量渠道给到商务后的响应和转化效率。</td><td contenteditable='true'>渠道经理 / 商务经理</td><td contenteditable='true'>Telegram商机、CRM/表格、工作Agent任务</td><td contenteditable='true'>规定时限内完成确认的商机数 / 总商机数</td><td contenteditable='true'>超时商机自动提醒，明确归属、下一步、放弃原因。</td><td contenteditable='true'>减少渠道线索浪费，提高转化可追踪性。</td></tr><tr><td contenteditable='true'>报价支持时效</td><td contenteditable='true'>商务过程</td><td contenteditable='true'>衡量报价、折扣、产品方案对客户推进的支撑速度。</td><td contenteditable='true'>商务支持 / 售前 / 财务</td><td contenteditable='true'>报价申请、售前方案、财务审批记录</td><td contenteditable='true'>报价完成时间 - 需求提出时间</td><td contenteditable='true'>复杂报价设 SLA，超 SLA 触发主管协调。</td><td contenteditable='true'>缩短销售周期，减少客户等待造成的流失。</td></tr><tr><td contenteditable='true'>合同审核周期</td><td contenteditable='true'>风控过程</td><td contenteditable='true'>衡量法务、商务、客户三方条款确认速度。</td><td contenteditable='true'>商务经理 / 法务</td><td contenteditable='true'>合同台账、法务审核记录</td><td contenteditable='true'>合同提交至定稿/签署的天数</td><td contenteditable='true'>高频争议条款沉淀模板，超期合同拉专门清单。</td><td contenteditable='true'>在不牺牲合规的前提下加快签约。</td></tr><tr><td contenteditable='true'>应收账款逾期率</td><td contenteditable='true'>财务风险</td><td contenteditable='true'>衡量已签约或已交付客户的回款风险。</td><td contenteditable='true'>商务负责人 / 财务</td><td contenteditable='true'>财务到账、开票、合同账期</td><td contenteditable='true'>逾期应收金额 / 应收总金额</td><td contenteditable='true'>账龄分层，逾期客户指定回款责任人和升级节点。</td><td contenteditable='true'>保护现金流，减少收入确认和坏账风险。</td></tr><tr><td contenteditable='true'>管理动作闭环率</td><td contenteditable='true'>组织管理</td><td contenteditable='true'>衡量会议和Agent识别的问题是否真的被处理。</td><td contenteditable='true'>HRBP / 业务负责人</td><td contenteditable='true'>工作Agent、主动提醒、会议纪要、闭环记录</td><td contenteditable='true'>已完成任务 / 应完成任务</td><td contenteditable='true'>每周复盘高优任务，未闭环必须给责任人、日期、验收标准。</td><td contenteditable='true'>让管理从发现问题走向结果闭环。</td></tr></tbody></table>
+    <table id="metric-table"><thead><tr><th>指标名称</th><th>指标类别</th><th>业务含义</th><th>负责岗位</th><th>数据来源</th><th>计算方式</th><th>管理动作</th><th>对应价值</th></tr></thead><tbody><tr><td data-table-editable='true'>商务月度回款完成率</td><td data-table-editable='true'>结果指标</td><td data-table-editable='true'>衡量商务目标达成进度，避免只看订单数不看金额。</td><td data-table-editable='true'>商务负责人 / 商务经理</td><td data-table-editable='true'>官方BI订单；5月BI未更新时用和优每日平台日报估算并标注</td><td data-table-editable='true'>本月回款金额 / 月度目标</td><td data-table-editable='true'>拆到客户、产品、预计回款日；低完成人员每周一张缺口表。</td><td data-table-editable='true'>收入预测更稳定，管理层能看到缺口来源。</td></tr><tr><td data-table-editable='true'>个人KPI缺口金额</td><td data-table-editable='true'>过程+结果</td><td data-table-editable='true'>定位谁拖缺口，以及缺口来自新增、续费还是大客户延期。</td><td data-table-editable='true'>商务负责人 / HRBP</td><td data-table-editable='true'>BI个人目标、订单明细、商务例会纪要</td><td data-table-editable='true'>个人目标 - 已回款金额</td><td data-table-editable='true'>对缺口人员拉客户清单、报价状态、预计回款日和主管支持项。</td><td data-table-editable='true'>从泛泛催业绩转为具体客户推进。</td></tr><tr><td data-table-editable='true'>渠道新增用户数</td><td data-table-editable='true'>渠道输入</td><td data-table-editable='true'>衡量渠道供给量，不等同于有效增长。</td><td data-table-editable='true'>渠道负责人 / 渠道经理</td><td data-table-editable='true'>渠道每日业绩 Google Sheet、渠道日报</td><td data-table-editable='true'>各渠道新增用户求和</td><td data-table-editable='true'>按渠道来源、负责人、产品分层，低质量新增进入复盘。</td><td data-table-editable='true'>保证商务有足够线索池，同时避免低质流量堆量。</td></tr><tr><td data-table-editable='true'>渠道充值/消耗比</td><td data-table-editable='true'>质量指标</td><td data-table-editable='true'>衡量渠道投放质量和回收效率，是渠道管理核心健康度指标。</td><td data-table-editable='true'>渠道负责人 / 渠道运营</td><td data-table-editable='true'>收费APP、免费盒子、渠道每日投放表</td><td data-table-editable='true'>充值金额 / 投放消耗</td><td data-table-editable='true'>低于阈值的渠道暂停加量，检查素材、落地页、到账和统计口径。</td><td data-table-editable='true'>降低无效消耗，提高渠道预算效率。</td></tr><tr><td data-table-editable='true'>伙伴活跃与贡献</td><td data-table-editable='true'>生态指标</td><td data-table-editable='true'>判断外部渠道伙伴是否持续贡献有效商机。</td><td data-table-editable='true'>渠道经理 / 渠道BD</td><td data-table-editable='true'>伙伴报备、链接同步群、渠道合作记录</td><td data-table-editable='true'>活跃伙伴数、有效商机数、成交额、异常次数</td><td data-table-editable='true'>做伙伴分级，A类给政策和资源，C类限期激活或淘汰。</td><td data-table-editable='true'>渠道生态从人情维护变成经营资产管理。</td></tr><tr><td data-table-editable='true'>商机流转及时率</td><td data-table-editable='true'>协同过程</td><td data-table-editable='true'>衡量渠道给到商务后的响应和转化效率。</td><td data-table-editable='true'>渠道经理 / 商务经理</td><td data-table-editable='true'>Telegram商机、CRM/表格、工作Agent任务</td><td data-table-editable='true'>规定时限内完成确认的商机数 / 总商机数</td><td data-table-editable='true'>超时商机自动提醒，明确归属、下一步、放弃原因。</td><td data-table-editable='true'>减少渠道线索浪费，提高转化可追踪性。</td></tr><tr><td data-table-editable='true'>报价支持时效</td><td data-table-editable='true'>商务过程</td><td data-table-editable='true'>衡量报价、折扣、产品方案对客户推进的支撑速度。</td><td data-table-editable='true'>商务支持 / 售前 / 财务</td><td data-table-editable='true'>报价申请、售前方案、财务审批记录</td><td data-table-editable='true'>报价完成时间 - 需求提出时间</td><td data-table-editable='true'>复杂报价设 SLA，超 SLA 触发主管协调。</td><td data-table-editable='true'>缩短销售周期，减少客户等待造成的流失。</td></tr><tr><td data-table-editable='true'>合同审核周期</td><td data-table-editable='true'>风控过程</td><td data-table-editable='true'>衡量法务、商务、客户三方条款确认速度。</td><td data-table-editable='true'>商务经理 / 法务</td><td data-table-editable='true'>合同台账、法务审核记录</td><td data-table-editable='true'>合同提交至定稿/签署的天数</td><td data-table-editable='true'>高频争议条款沉淀模板，超期合同拉专门清单。</td><td data-table-editable='true'>在不牺牲合规的前提下加快签约。</td></tr><tr><td data-table-editable='true'>应收账款逾期率</td><td data-table-editable='true'>财务风险</td><td data-table-editable='true'>衡量已签约或已交付客户的回款风险。</td><td data-table-editable='true'>商务负责人 / 财务</td><td data-table-editable='true'>财务到账、开票、合同账期</td><td data-table-editable='true'>逾期应收金额 / 应收总金额</td><td data-table-editable='true'>账龄分层，逾期客户指定回款责任人和升级节点。</td><td data-table-editable='true'>保护现金流，减少收入确认和坏账风险。</td></tr><tr><td data-table-editable='true'>管理动作闭环率</td><td data-table-editable='true'>组织管理</td><td data-table-editable='true'>衡量会议和Agent识别的问题是否真的被处理。</td><td data-table-editable='true'>HRBP / 业务负责人</td><td data-table-editable='true'>工作Agent、主动提醒、会议纪要、闭环记录</td><td data-table-editable='true'>已完成任务 / 应完成任务</td><td data-table-editable='true'>每周复盘高优任务，未闭环必须给责任人、日期、验收标准。</td><td data-table-editable='true'>让管理从发现问题走向结果闭环。</td></tr></tbody></table>
     
   </section>
 
@@ -332,9 +357,10 @@
     
     <div class="table-actions">
       <button onclick="copyCsv('capability-table')">复制为 CSV</button>
-      <span>表格单元格可直接在浏览器里改字，再复制到 Excel / 飞书。</span>
+      <button onclick="downloadTableCsv('capability-table','capability-table.csv')">下载当前表格 CSV</button>
+      <span>先点顶部“开启编辑”，再点单元格改字；复制/下载会读取当前页面内容。</span>
     </div>
-    <table id="capability-table"><thead><tr><th>能力维度</th><th>关键能力项</th><th>目标岗位要求</th><th>当前表现描述</th><th>目标等级</th><th>当前等级</th><th>差距等级</th><th>权重</th><th>差距得分</th><th>证据来源</th><th>主要风险</th><th>培养动作</th><th>责任导师 / 负责人</th><th>完成时间</th><th>验收标准</th></tr></thead><tbody><tr><td contenteditable='true'>经营理解能力</td><td contenteditable='true'>收入模型与目标拆解</td><td contenteditable='true'>能把收入目标拆到客户、产品、渠道和周动作。</td><td contenteditable='true'>能看懂总目标，但对客户/产品缺口拆解不足。</td><td contenteditable='true'>4</td><td contenteditable='true'>3</td><td contenteditable='true'>1</td><td contenteditable='true'>0.1</td><td contenteditable='true'>0.1</td><td contenteditable='true'>BI目标、商务例会、周报</td><td contenteditable='true'>只催结果，不知道缺口来自哪里。</td><td contenteditable='true'>每周输出一张目标拆解表。</td><td contenteditable='true'>商务负责人</td><td contenteditable='true'>2周</td><td contenteditable='true'>能独立说明TOP客户、产品、金额和回款节点。</td></tr><tr><td contenteditable='true'>渠道开发能力</td><td contenteditable='true'>伙伴招募与渠道拓展</td><td contenteditable='true'>能定义目标伙伴画像并形成有效商机池。</td><td contenteditable='true'>有渠道触达动作，但伙伴质量分层不足。</td><td contenteditable='true'>4</td><td contenteditable='true'>3</td><td contenteditable='true'>1</td><td contenteditable='true'>0.08</td><td contenteditable='true'>0.08</td><td contenteditable='true'>渠道链接群、伙伴报备</td><td contenteditable='true'>新增多但有效商机少。</td><td contenteditable='true'>建立伙伴A/B/C分层和月度复盘。</td><td contenteditable='true'>渠道负责人</td><td contenteditable='true'>3周</td><td contenteditable='true'>每类伙伴有准入标准、维护动作和退出标准。</td></tr><tr><td contenteditable='true'>渠道管理能力</td><td contenteditable='true'>渠道质量和投放复盘</td><td contenteditable='true'>能用新增、消耗、充值、ROI判断渠道质量。</td><td contenteditable='true'>能汇总日报，复盘还停留在结果陈述。</td><td contenteditable='true'>4</td><td contenteditable='true'>3</td><td contenteditable='true'>1</td><td contenteditable='true'>0.1</td><td contenteditable='true'>0.1</td><td contenteditable='true'>渠道每日业绩表、渠道日报</td><td contenteditable='true'>低ROI渠道继续消耗预算。</td><td contenteditable='true'>每周做一次低效渠道诊断。</td><td contenteditable='true'>渠道负责人</td><td contenteditable='true'>2周</td><td contenteditable='true'>能提出暂停、加量、换素材、换落地页的判断。</td></tr><tr><td contenteditable='true'>商务谈判能力</td><td contenteditable='true'>客户推进与利益交换</td><td contenteditable='true'>能识别客户真实预算、决策链和交换条件。</td><td contenteditable='true'>能跟进客户，但关键节点推进策略不稳定。</td><td contenteditable='true'>4</td><td contenteditable='true'>3</td><td contenteditable='true'>1</td><td contenteditable='true'>0.09</td><td contenteditable='true'>0.09</td><td contenteditable='true'>客户跟进记录、回款清单</td><td contenteditable='true'>客户承诺多，实际回款慢。</td><td contenteditable='true'>复盘3个重点客户谈判过程。</td><td contenteditable='true'>商务负责人</td><td contenteditable='true'>1个月</td><td contenteditable='true'>能给出客户决策人、预算、障碍、下一步。</td></tr><tr><td contenteditable='true'>报价与合同管理能力</td><td contenteditable='true'>报价测算、条款审核、留痕</td><td contenteditable='true'>能平衡客户转化、毛利、风控和合同周期。</td><td contenteditable='true'>能处理常规报价，复杂特批依赖主管。</td><td contenteditable='true'>4</td><td contenteditable='true'>2</td><td contenteditable='true'>2</td><td contenteditable='true'>0.09</td><td contenteditable='true'>0.18</td><td contenteditable='true'>报价单、合同台账、法务意见</td><td contenteditable='true'>低价特批、口头承诺、合同留痕不足。</td><td contenteditable='true'>学习报价模板和高风险条款清单。</td><td contenteditable='true'>商务支持 / 法务</td><td contenteditable='true'>3周</td><td contenteditable='true'>能独立完成一单复杂报价和合同风险说明。</td></tr><tr><td contenteditable='true'>数据分析能力</td><td contenteditable='true'>指标解释与异常定位</td><td contenteditable='true'>能从数据看出业务原因并提出动作。</td><td contenteditable='true'>能看表，但对异常的业务解释不够。</td><td contenteditable='true'>4</td><td contenteditable='true'>3</td><td contenteditable='true'>1</td><td contenteditable='true'>0.09</td><td contenteditable='true'>0.09</td><td contenteditable='true'>BI、Google Sheets、工作Agent</td><td contenteditable='true'>把数据波动误判为人员态度问题。</td><td contenteditable='true'>每周选2个异常指标写原因树。</td><td contenteditable='true'>数据专员 / HRBP</td><td contenteditable='true'>2周</td><td contenteditable='true'>能区分口径问题、资源问题、执行问题。</td></tr><tr><td contenteditable='true'>跨部门协同能力</td><td contenteditable='true'>售前、产品、财务、法务协同</td><td contenteditable='true'>能明确协同对象、交付物、截止时间和升级路径。</td><td contenteditable='true'>能沟通协调，但闭环记录不完整。</td><td contenteditable='true'>4</td><td contenteditable='true'>3</td><td contenteditable='true'>1</td><td contenteditable='true'>0.08</td><td contenteditable='true'>0.08</td><td contenteditable='true'>会议纪要、工作Agent闭环</td><td contenteditable='true'>问题被转发但没人负责。</td><td contenteditable='true'>所有跨部门事项用四要素记录。</td><td contenteditable='true'>业务负责人 / HRBP</td><td contenteditable='true'>2周</td><td contenteditable='true'>每个事项有负责人、动作、截止、验收。</td></tr><tr><td contenteditable='true'>客户与伙伴关系管理能力</td><td contenteditable='true'>客户分层和伙伴分级</td><td contenteditable='true'>能区分重点客户、普通客户和风险客户。</td><td contenteditable='true'>关系维护有动作，经营分层不足。</td><td contenteditable='true'>4</td><td contenteditable='true'>3</td><td contenteditable='true'>1</td><td contenteditable='true'>0.08</td><td contenteditable='true'>0.08</td><td contenteditable='true'>客户清单、伙伴台账</td><td contenteditable='true'>资源平均分配，重点客户经营不足。</td><td contenteditable='true'>建立客户/伙伴四象限。</td><td contenteditable='true'>渠道/商务负责人</td><td contenteditable='true'>3周</td><td contenteditable='true'>能说明每类对象的维护频率和产出目标。</td></tr><tr><td contenteditable='true'>风险合规意识</td><td contenteditable='true'>报价、合同、回款、伙伴异常</td><td contenteditable='true'>能提前识别合规红线并留痕。</td><td contenteditable='true'>能按流程做，但对异常预警敏感度不足。</td><td contenteditable='true'>4</td><td contenteditable='true'>2</td><td contenteditable='true'>2</td><td contenteditable='true'>0.08</td><td contenteditable='true'>0.16</td><td contenteditable='true'>合同审核、财务回款、异常群</td><td contenteditable='true'>私下承诺、逾期、渠道异常未升级。</td><td contenteditable='true'>建立风险清单和升级规则。</td><td contenteditable='true'>法务 / 财务 / HRBP</td><td contenteditable='true'>1个月</td><td contenteditable='true'>能识别并上报3类典型风险。</td></tr><tr><td contenteditable='true'>团队管理与带教能力</td><td contenteditable='true'>任务分配、辅导、复盘</td><td contenteditable='true'>能带教新人和低绩效成员，推动团队结果。</td><td contenteditable='true'>能安排任务，辅导方法还不系统。</td><td contenteditable='true'>4</td><td contenteditable='true'>3</td><td contenteditable='true'>1</td><td contenteditable='true'>0.07</td><td contenteditable='true'>0.07</td><td contenteditable='true'>新人上手、关怀访谈、主管反馈</td><td contenteditable='true'>新人适应慢，低绩效反复。</td><td contenteditable='true'>做7天新人上手清单和月度辅导记录。</td><td contenteditable='true'>直属主管</td><td contenteditable='true'>2周</td><td contenteditable='true'>新人能按清单完成产品、流程、工具、客户观察。</td></tr><tr><td contenteditable='true'>目标拆解与过程管理能力</td><td contenteditable='true'>周目标、日动作、过程检查</td><td contenteditable='true'>能把月目标拆成周计划和日动作。</td><td contenteditable='true'>有计划但缺少过程检查节点。</td><td contenteditable='true'>4</td><td contenteditable='true'>3</td><td contenteditable='true'>1</td><td contenteditable='true'>0.08</td><td contenteditable='true'>0.08</td><td contenteditable='true'>会议转写、日报、Agent任务</td><td contenteditable='true'>月底才发现缺口，纠偏太晚。</td><td contenteditable='true'>建立周一拆解、周三检查、周五复盘节奏。</td><td contenteditable='true'>业务负责人</td><td contenteditable='true'>2周</td><td contenteditable='true'>能持续两周输出目标-动作-结果闭环。</td></tr><tr><td contenteditable='true'>复盘改进能力</td><td contenteditable='true'>原因树与机制沉淀</td><td contenteditable='true'>能把个案问题转成机制优化。</td><td contenteditable='true'>能总结现象，机制化沉淀不足。</td><td contenteditable='true'>4</td><td contenteditable='true'>2</td><td contenteditable='true'>2</td><td contenteditable='true'>0.06</td><td contenteditable='true'>0.12</td><td contenteditable='true'>周报、例会、管理输出</td><td contenteditable='true'>同类问题重复发生。</td><td contenteditable='true'>每月沉淀一个流程模板或检查清单。</td><td contenteditable='true'>HRBP / 业务负责人</td><td contenteditable='true'>1个月</td><td contenteditable='true'>形成可复用模板，并在下一轮业务中使用。</td></tr></tbody></table>
+    <table id="capability-table"><thead><tr><th>能力维度</th><th>关键能力项</th><th>目标岗位要求</th><th>当前表现描述</th><th>目标等级</th><th>当前等级</th><th>差距等级</th><th>权重</th><th>差距得分</th><th>证据来源</th><th>主要风险</th><th>培养动作</th><th>责任导师 / 负责人</th><th>完成时间</th><th>验收标准</th></tr></thead><tbody><tr><td data-table-editable='true'>经营理解能力</td><td data-table-editable='true'>收入模型与目标拆解</td><td data-table-editable='true'>能把收入目标拆到客户、产品、渠道和周动作。</td><td data-table-editable='true'>能看懂总目标，但对客户/产品缺口拆解不足。</td><td data-table-editable='true'>4</td><td data-table-editable='true'>3</td><td data-table-editable='true'>1</td><td data-table-editable='true'>0.1</td><td data-table-editable='true'>0.1</td><td data-table-editable='true'>BI目标、商务例会、周报</td><td data-table-editable='true'>只催结果，不知道缺口来自哪里。</td><td data-table-editable='true'>每周输出一张目标拆解表。</td><td data-table-editable='true'>商务负责人</td><td data-table-editable='true'>2周</td><td data-table-editable='true'>能独立说明TOP客户、产品、金额和回款节点。</td></tr><tr><td data-table-editable='true'>渠道开发能力</td><td data-table-editable='true'>伙伴招募与渠道拓展</td><td data-table-editable='true'>能定义目标伙伴画像并形成有效商机池。</td><td data-table-editable='true'>有渠道触达动作，但伙伴质量分层不足。</td><td data-table-editable='true'>4</td><td data-table-editable='true'>3</td><td data-table-editable='true'>1</td><td data-table-editable='true'>0.08</td><td data-table-editable='true'>0.08</td><td data-table-editable='true'>渠道链接群、伙伴报备</td><td data-table-editable='true'>新增多但有效商机少。</td><td data-table-editable='true'>建立伙伴A/B/C分层和月度复盘。</td><td data-table-editable='true'>渠道负责人</td><td data-table-editable='true'>3周</td><td data-table-editable='true'>每类伙伴有准入标准、维护动作和退出标准。</td></tr><tr><td data-table-editable='true'>渠道管理能力</td><td data-table-editable='true'>渠道质量和投放复盘</td><td data-table-editable='true'>能用新增、消耗、充值、ROI判断渠道质量。</td><td data-table-editable='true'>能汇总日报，复盘还停留在结果陈述。</td><td data-table-editable='true'>4</td><td data-table-editable='true'>3</td><td data-table-editable='true'>1</td><td data-table-editable='true'>0.1</td><td data-table-editable='true'>0.1</td><td data-table-editable='true'>渠道每日业绩表、渠道日报</td><td data-table-editable='true'>低ROI渠道继续消耗预算。</td><td data-table-editable='true'>每周做一次低效渠道诊断。</td><td data-table-editable='true'>渠道负责人</td><td data-table-editable='true'>2周</td><td data-table-editable='true'>能提出暂停、加量、换素材、换落地页的判断。</td></tr><tr><td data-table-editable='true'>商务谈判能力</td><td data-table-editable='true'>客户推进与利益交换</td><td data-table-editable='true'>能识别客户真实预算、决策链和交换条件。</td><td data-table-editable='true'>能跟进客户，但关键节点推进策略不稳定。</td><td data-table-editable='true'>4</td><td data-table-editable='true'>3</td><td data-table-editable='true'>1</td><td data-table-editable='true'>0.09</td><td data-table-editable='true'>0.09</td><td data-table-editable='true'>客户跟进记录、回款清单</td><td data-table-editable='true'>客户承诺多，实际回款慢。</td><td data-table-editable='true'>复盘3个重点客户谈判过程。</td><td data-table-editable='true'>商务负责人</td><td data-table-editable='true'>1个月</td><td data-table-editable='true'>能给出客户决策人、预算、障碍、下一步。</td></tr><tr><td data-table-editable='true'>报价与合同管理能力</td><td data-table-editable='true'>报价测算、条款审核、留痕</td><td data-table-editable='true'>能平衡客户转化、毛利、风控和合同周期。</td><td data-table-editable='true'>能处理常规报价，复杂特批依赖主管。</td><td data-table-editable='true'>4</td><td data-table-editable='true'>2</td><td data-table-editable='true'>2</td><td data-table-editable='true'>0.09</td><td data-table-editable='true'>0.18</td><td data-table-editable='true'>报价单、合同台账、法务意见</td><td data-table-editable='true'>低价特批、口头承诺、合同留痕不足。</td><td data-table-editable='true'>学习报价模板和高风险条款清单。</td><td data-table-editable='true'>商务支持 / 法务</td><td data-table-editable='true'>3周</td><td data-table-editable='true'>能独立完成一单复杂报价和合同风险说明。</td></tr><tr><td data-table-editable='true'>数据分析能力</td><td data-table-editable='true'>指标解释与异常定位</td><td data-table-editable='true'>能从数据看出业务原因并提出动作。</td><td data-table-editable='true'>能看表，但对异常的业务解释不够。</td><td data-table-editable='true'>4</td><td data-table-editable='true'>3</td><td data-table-editable='true'>1</td><td data-table-editable='true'>0.09</td><td data-table-editable='true'>0.09</td><td data-table-editable='true'>BI、Google Sheets、工作Agent</td><td data-table-editable='true'>把数据波动误判为人员态度问题。</td><td data-table-editable='true'>每周选2个异常指标写原因树。</td><td data-table-editable='true'>数据专员 / HRBP</td><td data-table-editable='true'>2周</td><td data-table-editable='true'>能区分口径问题、资源问题、执行问题。</td></tr><tr><td data-table-editable='true'>跨部门协同能力</td><td data-table-editable='true'>售前、产品、财务、法务协同</td><td data-table-editable='true'>能明确协同对象、交付物、截止时间和升级路径。</td><td data-table-editable='true'>能沟通协调，但闭环记录不完整。</td><td data-table-editable='true'>4</td><td data-table-editable='true'>3</td><td data-table-editable='true'>1</td><td data-table-editable='true'>0.08</td><td data-table-editable='true'>0.08</td><td data-table-editable='true'>会议纪要、工作Agent闭环</td><td data-table-editable='true'>问题被转发但没人负责。</td><td data-table-editable='true'>所有跨部门事项用四要素记录。</td><td data-table-editable='true'>业务负责人 / HRBP</td><td data-table-editable='true'>2周</td><td data-table-editable='true'>每个事项有负责人、动作、截止、验收。</td></tr><tr><td data-table-editable='true'>客户与伙伴关系管理能力</td><td data-table-editable='true'>客户分层和伙伴分级</td><td data-table-editable='true'>能区分重点客户、普通客户和风险客户。</td><td data-table-editable='true'>关系维护有动作，经营分层不足。</td><td data-table-editable='true'>4</td><td data-table-editable='true'>3</td><td data-table-editable='true'>1</td><td data-table-editable='true'>0.08</td><td data-table-editable='true'>0.08</td><td data-table-editable='true'>客户清单、伙伴台账</td><td data-table-editable='true'>资源平均分配，重点客户经营不足。</td><td data-table-editable='true'>建立客户/伙伴四象限。</td><td data-table-editable='true'>渠道/商务负责人</td><td data-table-editable='true'>3周</td><td data-table-editable='true'>能说明每类对象的维护频率和产出目标。</td></tr><tr><td data-table-editable='true'>风险合规意识</td><td data-table-editable='true'>报价、合同、回款、伙伴异常</td><td data-table-editable='true'>能提前识别合规红线并留痕。</td><td data-table-editable='true'>能按流程做，但对异常预警敏感度不足。</td><td data-table-editable='true'>4</td><td data-table-editable='true'>2</td><td data-table-editable='true'>2</td><td data-table-editable='true'>0.08</td><td data-table-editable='true'>0.16</td><td data-table-editable='true'>合同审核、财务回款、异常群</td><td data-table-editable='true'>私下承诺、逾期、渠道异常未升级。</td><td data-table-editable='true'>建立风险清单和升级规则。</td><td data-table-editable='true'>法务 / 财务 / HRBP</td><td data-table-editable='true'>1个月</td><td data-table-editable='true'>能识别并上报3类典型风险。</td></tr><tr><td data-table-editable='true'>团队管理与带教能力</td><td data-table-editable='true'>任务分配、辅导、复盘</td><td data-table-editable='true'>能带教新人和低绩效成员，推动团队结果。</td><td data-table-editable='true'>能安排任务，辅导方法还不系统。</td><td data-table-editable='true'>4</td><td data-table-editable='true'>3</td><td data-table-editable='true'>1</td><td data-table-editable='true'>0.07</td><td data-table-editable='true'>0.07</td><td data-table-editable='true'>新人上手、关怀访谈、主管反馈</td><td data-table-editable='true'>新人适应慢，低绩效反复。</td><td data-table-editable='true'>做7天新人上手清单和月度辅导记录。</td><td data-table-editable='true'>直属主管</td><td data-table-editable='true'>2周</td><td data-table-editable='true'>新人能按清单完成产品、流程、工具、客户观察。</td></tr><tr><td data-table-editable='true'>目标拆解与过程管理能力</td><td data-table-editable='true'>周目标、日动作、过程检查</td><td data-table-editable='true'>能把月目标拆成周计划和日动作。</td><td data-table-editable='true'>有计划但缺少过程检查节点。</td><td data-table-editable='true'>4</td><td data-table-editable='true'>3</td><td data-table-editable='true'>1</td><td data-table-editable='true'>0.08</td><td data-table-editable='true'>0.08</td><td data-table-editable='true'>会议转写、日报、Agent任务</td><td data-table-editable='true'>月底才发现缺口，纠偏太晚。</td><td data-table-editable='true'>建立周一拆解、周三检查、周五复盘节奏。</td><td data-table-editable='true'>业务负责人</td><td data-table-editable='true'>2周</td><td data-table-editable='true'>能持续两周输出目标-动作-结果闭环。</td></tr><tr><td data-table-editable='true'>复盘改进能力</td><td data-table-editable='true'>原因树与机制沉淀</td><td data-table-editable='true'>能把个案问题转成机制优化。</td><td data-table-editable='true'>能总结现象，机制化沉淀不足。</td><td data-table-editable='true'>4</td><td data-table-editable='true'>2</td><td data-table-editable='true'>2</td><td data-table-editable='true'>0.06</td><td data-table-editable='true'>0.12</td><td data-table-editable='true'>周报、例会、管理输出</td><td data-table-editable='true'>同类问题重复发生。</td><td data-table-editable='true'>每月沉淀一个流程模板或检查清单。</td><td data-table-editable='true'>HRBP / 业务负责人</td><td data-table-editable='true'>1个月</td><td data-table-editable='true'>形成可复用模板，并在下一轮业务中使用。</td></tr></tbody></table>
     
   </section>
 
@@ -354,7 +380,9 @@
     <h2>6. 在线可编辑实现方式</h2>
     <ul>
       <li>Mermaid 文本框可直接复制到 Mermaid Live Editor、飞书、Notion、ProcessOn 或 draw.io 二次编辑。</li>
-      <li>指标表和能力表支持浏览器内直接改字，点击“复制为 CSV”可粘到 Excel 或飞书表格。</li>
+      <li>点击右上角“开启编辑”后，正文、卡片、表格均可在浏览器内直接改字；点击“下载当前编辑版 HTML”可保存当前版本。</li>
+      <li>指标表和能力表改完后，点击“复制为 CSV”或“下载当前表格 CSV”可粘到 Excel / 飞书表格。</li>
+      <li>Mermaid 源码改完后，点击“重新渲染图”即可刷新页面里的图，再下载 SVG。</li>
       <li>本页面可直接打印为 PDF，也可以把每个模块拆成 PPT 页面。</li>
       <li>导出的 CSV 文件已保存到 <code>output/role_analysis</code>，便于继续加工。</li>
     </ul>
@@ -365,9 +393,10 @@
     
     <div class="table-actions">
       <button onclick="copyCsv('ppt-table')">复制为 CSV</button>
-      <span>表格单元格可直接在浏览器里改字，再复制到 Excel / 飞书。</span>
+      <button onclick="downloadTableCsv('ppt-table','ppt-table.csv')">下载当前表格 CSV</button>
+      <span>先点顶部“开启编辑”，再点单元格改字；复制/下载会读取当前页面内容。</span>
     </div>
-    <table id="ppt-table"><thead><tr><th>页码</th><th>标题</th><th>核心观点</th><th>页面布局建议</th><th>图表放置方式</th><th>配色建议</th><th>汇报话术</th><th>主页面/附录</th></tr></thead><tbody><tr><td contenteditable='true'>1</td><td contenteditable='true'>渠道与商务管理岗位分析：从职责到经营结果</td><td contenteditable='true'>管理岗价值不在汇报关系，而在把渠道供给、商务转化、合同回款和组织能力连成闭环。</td><td contenteditable='true'>左侧一句话结论，右侧放四个关键数字：商务8人、渠道13人、Agent39项、BI/Sheets/会议已接入。</td><td contenteditable='true'>KPI条 + 数据源标签</td><td contenteditable='true'>渠道绿色、商务金色、风控红色、战略蓝色</td><td contenteditable='true'>这页先告诉评委：我们不是画组织架构，而是画岗位如何驱动收入和风险闭环。</td><td contenteditable='true'>主页面</td></tr><tr><td contenteditable='true'>2</td><td contenteditable='true'>信息架构：三张核心交付物如何回答评审问题</td><td contenteditable='true'>关系图回答谁和谁协作，逻辑图回答指标如何变动作，能力表回答谁能接岗位。</td><td contenteditable='true'>三栏卡片：上下游关系、指标业务价值、备岗能力差距。</td><td contenteditable='true'>三模块卡片</td><td contenteditable='true'>统一深色底 + 亮色描边</td><td contenteditable='true'>每个模块都对应一个管理问题，避免只讲HR理论。</td><td contenteditable='true'>主页面</td></tr><tr><td contenteditable='true'>3</td><td contenteditable='true'>管理岗位上下游关系图</td><td contenteditable='true'>渠道和商务是双主线：渠道负责供给质量，商务负责客户转化和回款，两者通过商机流转和反馈闭环连接。</td><td contenteditable='true'>整页放Mermaid关系图，下方用3条解释强调信息流、业务流、反馈流。</td><td contenteditable='true'>Mermaid图居中，线条标签保留</td><td contenteditable='true'>渠道绿色、商务金色、支持灰色、外部紫色</td><td contenteditable='true'>请看中间两条主线，渠道不是只拉量，商务不是只签单，真正的管理节点在交接和反馈。</td><td contenteditable='true'>主页面</td></tr><tr><td contenteditable='true'>4</td><td contenteditable='true'>指标—业务动作—组织价值逻辑图</td><td contenteditable='true'>每个指标必须落到岗位动作，否则指标只是看板数字。</td><td contenteditable='true'>左指标层，中动作层，右价值层；下方放指标表TOP6。</td><td contenteditable='true'>Mermaid逻辑图 + 摘要表</td><td contenteditable='true'>指标灰、动作绿/金、风险红、价值蓝</td><td contenteditable='true'>这张图用来证明我们理解了业务因果，而不是简单罗列KPI。</td><td contenteditable='true'>主页面</td></tr><tr><td contenteditable='true'>5</td><td contenteditable='true'>关键指标表：从数据源到管理动作</td><td contenteditable='true'>将BI、Sheets、Telegram、会议转写、Agent闭环统一到同一张经营管理表。</td><td contenteditable='true'>表格分组显示：结果、渠道、协同、风险、组织。</td><td contenteditable='true'>主页面放8-10行，完整表放附录</td><td contenteditable='true'>表头深蓝，风险项红色标记</td><td contenteditable='true'>评审要看的不是指标多，而是每个指标是否能触发一个明确动作。</td><td contenteditable='true'>主页面+附录</td></tr><tr><td contenteditable='true'>6</td><td contenteditable='true'>备岗人员能力差距评估</td><td contenteditable='true'>备岗不是名单，而是目标岗位要求、当前证据、差距得分、培养动作的闭环。</td><td contenteditable='true'>左侧评分规则，右侧能力差距表摘要；底部放公式。</td><td contenteditable='true'>评分规则卡 + 表格摘要</td><td contenteditable='true'>低分红、中分黄、高分绿</td><td contenteditable='true'>这张表能直接拿来评估渠道经理、商务经理或负责人备岗成熟度。</td><td contenteditable='true'>主页面</td></tr><tr><td contenteditable='true'>7</td><td contenteditable='true'>样例人员培养计划</td><td contenteditable='true'>高差距项优先培养：报价合同、风险合规、复盘机制，而不是泛泛培训。</td><td contenteditable='true'>左能力雷达维度说明，右30/60/90天培养计划。</td><td contenteditable='true'>雷达图占左侧，行动清单占右侧</td><td contenteditable='true'>目标线蓝色，当前线橙色</td><td contenteditable='true'>我们用差距得分排序培养优先级，把管理发展变成可验收项目。</td><td contenteditable='true'>主页面</td></tr><tr><td contenteditable='true'>8</td><td contenteditable='true'>可调整字段与落地路径</td><td contenteditable='true'>模板已能展示，但上线前需替换公司真实口径、岗位命名、阈值和审批规则。</td><td contenteditable='true'>四象限：组织字段、指标阈值、流程SLA、评分权重。</td><td contenteditable='true'>字段清单</td><td contenteditable='true'>中性灰 + 重点蓝</td><td contenteditable='true'>最后说明这不是一次性PPT，而是可以接入看板持续更新的管理工具。</td><td contenteditable='true'>附录</td></tr></tbody></table>
+    <table id="ppt-table"><thead><tr><th>页码</th><th>标题</th><th>核心观点</th><th>页面布局建议</th><th>图表放置方式</th><th>配色建议</th><th>汇报话术</th><th>主页面/附录</th></tr></thead><tbody><tr><td data-table-editable='true'>1</td><td data-table-editable='true'>渠道与商务管理岗位分析：从职责到经营结果</td><td data-table-editable='true'>管理岗价值不在汇报关系，而在把渠道供给、商务转化、合同回款和组织能力连成闭环。</td><td data-table-editable='true'>左侧一句话结论，右侧放四个关键数字：商务8人、渠道13人、Agent39项、BI/Sheets/会议已接入。</td><td data-table-editable='true'>KPI条 + 数据源标签</td><td data-table-editable='true'>渠道绿色、商务金色、风控红色、战略蓝色</td><td data-table-editable='true'>这页先告诉评委：我们不是画组织架构，而是画岗位如何驱动收入和风险闭环。</td><td data-table-editable='true'>主页面</td></tr><tr><td data-table-editable='true'>2</td><td data-table-editable='true'>信息架构：三张核心交付物如何回答评审问题</td><td data-table-editable='true'>关系图回答谁和谁协作，逻辑图回答指标如何变动作，能力表回答谁能接岗位。</td><td data-table-editable='true'>三栏卡片：上下游关系、指标业务价值、备岗能力差距。</td><td data-table-editable='true'>三模块卡片</td><td data-table-editable='true'>统一深色底 + 亮色描边</td><td data-table-editable='true'>每个模块都对应一个管理问题，避免只讲HR理论。</td><td data-table-editable='true'>主页面</td></tr><tr><td data-table-editable='true'>3</td><td data-table-editable='true'>管理岗位上下游关系图</td><td data-table-editable='true'>渠道和商务是双主线：渠道负责供给质量，商务负责客户转化和回款，两者通过商机流转和反馈闭环连接。</td><td data-table-editable='true'>整页放Mermaid关系图，下方用3条解释强调信息流、业务流、反馈流。</td><td data-table-editable='true'>Mermaid图居中，线条标签保留</td><td data-table-editable='true'>渠道绿色、商务金色、支持灰色、外部紫色</td><td data-table-editable='true'>请看中间两条主线，渠道不是只拉量，商务不是只签单，真正的管理节点在交接和反馈。</td><td data-table-editable='true'>主页面</td></tr><tr><td data-table-editable='true'>4</td><td data-table-editable='true'>指标—业务动作—组织价值逻辑图</td><td data-table-editable='true'>每个指标必须落到岗位动作，否则指标只是看板数字。</td><td data-table-editable='true'>左指标层，中动作层，右价值层；下方放指标表TOP6。</td><td data-table-editable='true'>Mermaid逻辑图 + 摘要表</td><td data-table-editable='true'>指标灰、动作绿/金、风险红、价值蓝</td><td data-table-editable='true'>这张图用来证明我们理解了业务因果，而不是简单罗列KPI。</td><td data-table-editable='true'>主页面</td></tr><tr><td data-table-editable='true'>5</td><td data-table-editable='true'>关键指标表：从数据源到管理动作</td><td data-table-editable='true'>将BI、Sheets、Telegram、会议转写、Agent闭环统一到同一张经营管理表。</td><td data-table-editable='true'>表格分组显示：结果、渠道、协同、风险、组织。</td><td data-table-editable='true'>主页面放8-10行，完整表放附录</td><td data-table-editable='true'>表头深蓝，风险项红色标记</td><td data-table-editable='true'>评审要看的不是指标多，而是每个指标是否能触发一个明确动作。</td><td data-table-editable='true'>主页面+附录</td></tr><tr><td data-table-editable='true'>6</td><td data-table-editable='true'>备岗人员能力差距评估</td><td data-table-editable='true'>备岗不是名单，而是目标岗位要求、当前证据、差距得分、培养动作的闭环。</td><td data-table-editable='true'>左侧评分规则，右侧能力差距表摘要；底部放公式。</td><td data-table-editable='true'>评分规则卡 + 表格摘要</td><td data-table-editable='true'>低分红、中分黄、高分绿</td><td data-table-editable='true'>这张表能直接拿来评估渠道经理、商务经理或负责人备岗成熟度。</td><td data-table-editable='true'>主页面</td></tr><tr><td data-table-editable='true'>7</td><td data-table-editable='true'>样例人员培养计划</td><td data-table-editable='true'>高差距项优先培养：报价合同、风险合规、复盘机制，而不是泛泛培训。</td><td data-table-editable='true'>左能力雷达维度说明，右30/60/90天培养计划。</td><td data-table-editable='true'>雷达图占左侧，行动清单占右侧</td><td data-table-editable='true'>目标线蓝色，当前线橙色</td><td data-table-editable='true'>我们用差距得分排序培养优先级，把管理发展变成可验收项目。</td><td data-table-editable='true'>主页面</td></tr><tr><td data-table-editable='true'>8</td><td data-table-editable='true'>可调整字段与落地路径</td><td data-table-editable='true'>模板已能展示，但上线前需替换公司真实口径、岗位命名、阈值和审批规则。</td><td data-table-editable='true'>四象限：组织字段、指标阈值、流程SLA、评分权重。</td><td data-table-editable='true'>字段清单</td><td data-table-editable='true'>中性灰 + 重点蓝</td><td data-table-editable='true'>最后说明这不是一次性PPT，而是可以接入看板持续更新的管理工具。</td><td data-table-editable='true'>附录</td></tr></tbody></table>
     
   </section>
 
@@ -384,13 +413,194 @@
 <script>
   mermaid.initialize({ startOnLoad: true, theme: "dark", securityLevel: "loose", flowchart: { useMaxWidth: false, htmlLabels: true, curve: "basis" } });
   const csvData = {"metric": "指标名称,指标类别,业务含义,负责岗位,数据来源,计算方式,管理动作,对应价值\r\n商务月度回款完成率,结果指标,衡量商务目标达成进度，避免只看订单数不看金额。,商务负责人 / 商务经理,官方BI订单；5月BI未更新时用和优每日平台日报估算并标注,本月回款金额 / 月度目标,拆到客户、产品、预计回款日；低完成人员每周一张缺口表。,收入预测更稳定，管理层能看到缺口来源。\r\n个人KPI缺口金额,过程+结果,定位谁拖缺口，以及缺口来自新增、续费还是大客户延期。,商务负责人 / HRBP,BI个人目标、订单明细、商务例会纪要,个人目标 - 已回款金额,对缺口人员拉客户清单、报价状态、预计回款日和主管支持项。,从泛泛催业绩转为具体客户推进。\r\n渠道新增用户数,渠道输入,衡量渠道供给量，不等同于有效增长。,渠道负责人 / 渠道经理,渠道每日业绩 Google Sheet、渠道日报,各渠道新增用户求和,按渠道来源、负责人、产品分层，低质量新增进入复盘。,保证商务有足够线索池，同时避免低质流量堆量。\r\n渠道充值/消耗比,质量指标,衡量渠道投放质量和回收效率，是渠道管理核心健康度指标。,渠道负责人 / 渠道运营,收费APP、免费盒子、渠道每日投放表,充值金额 / 投放消耗,低于阈值的渠道暂停加量，检查素材、落地页、到账和统计口径。,降低无效消耗，提高渠道预算效率。\r\n伙伴活跃与贡献,生态指标,判断外部渠道伙伴是否持续贡献有效商机。,渠道经理 / 渠道BD,伙伴报备、链接同步群、渠道合作记录,活跃伙伴数、有效商机数、成交额、异常次数,做伙伴分级，A类给政策和资源，C类限期激活或淘汰。,渠道生态从人情维护变成经营资产管理。\r\n商机流转及时率,协同过程,衡量渠道给到商务后的响应和转化效率。,渠道经理 / 商务经理,Telegram商机、CRM/表格、工作Agent任务,规定时限内完成确认的商机数 / 总商机数,超时商机自动提醒，明确归属、下一步、放弃原因。,减少渠道线索浪费，提高转化可追踪性。\r\n报价支持时效,商务过程,衡量报价、折扣、产品方案对客户推进的支撑速度。,商务支持 / 售前 / 财务,报价申请、售前方案、财务审批记录,报价完成时间 - 需求提出时间,复杂报价设 SLA，超 SLA 触发主管协调。,缩短销售周期，减少客户等待造成的流失。\r\n合同审核周期,风控过程,衡量法务、商务、客户三方条款确认速度。,商务经理 / 法务,合同台账、法务审核记录,合同提交至定稿/签署的天数,高频争议条款沉淀模板，超期合同拉专门清单。,在不牺牲合规的前提下加快签约。\r\n应收账款逾期率,财务风险,衡量已签约或已交付客户的回款风险。,商务负责人 / 财务,财务到账、开票、合同账期,逾期应收金额 / 应收总金额,账龄分层，逾期客户指定回款责任人和升级节点。,保护现金流，减少收入确认和坏账风险。\r\n管理动作闭环率,组织管理,衡量会议和Agent识别的问题是否真的被处理。,HRBP / 业务负责人,工作Agent、主动提醒、会议纪要、闭环记录,已完成任务 / 应完成任务,每周复盘高优任务，未闭环必须给责任人、日期、验收标准。,让管理从发现问题走向结果闭环。\r\n", "capability": "能力维度,关键能力项,目标岗位要求,当前表现描述,目标等级,当前等级,差距等级,权重,差距得分,证据来源,主要风险,培养动作,责任导师 / 负责人,完成时间,验收标准\r\n经营理解能力,收入模型与目标拆解,能把收入目标拆到客户、产品、渠道和周动作。,能看懂总目标，但对客户/产品缺口拆解不足。,4,3,1,0.1,0.1,BI目标、商务例会、周报,只催结果，不知道缺口来自哪里。,每周输出一张目标拆解表。,商务负责人,2周,能独立说明TOP客户、产品、金额和回款节点。\r\n渠道开发能力,伙伴招募与渠道拓展,能定义目标伙伴画像并形成有效商机池。,有渠道触达动作，但伙伴质量分层不足。,4,3,1,0.08,0.08,渠道链接群、伙伴报备,新增多但有效商机少。,建立伙伴A/B/C分层和月度复盘。,渠道负责人,3周,每类伙伴有准入标准、维护动作和退出标准。\r\n渠道管理能力,渠道质量和投放复盘,能用新增、消耗、充值、ROI判断渠道质量。,能汇总日报，复盘还停留在结果陈述。,4,3,1,0.1,0.1,渠道每日业绩表、渠道日报,低ROI渠道继续消耗预算。,每周做一次低效渠道诊断。,渠道负责人,2周,能提出暂停、加量、换素材、换落地页的判断。\r\n商务谈判能力,客户推进与利益交换,能识别客户真实预算、决策链和交换条件。,能跟进客户，但关键节点推进策略不稳定。,4,3,1,0.09,0.09,客户跟进记录、回款清单,客户承诺多，实际回款慢。,复盘3个重点客户谈判过程。,商务负责人,1个月,能给出客户决策人、预算、障碍、下一步。\r\n报价与合同管理能力,报价测算、条款审核、留痕,能平衡客户转化、毛利、风控和合同周期。,能处理常规报价，复杂特批依赖主管。,4,2,2,0.09,0.18,报价单、合同台账、法务意见,低价特批、口头承诺、合同留痕不足。,学习报价模板和高风险条款清单。,商务支持 / 法务,3周,能独立完成一单复杂报价和合同风险说明。\r\n数据分析能力,指标解释与异常定位,能从数据看出业务原因并提出动作。,能看表，但对异常的业务解释不够。,4,3,1,0.09,0.09,BI、Google Sheets、工作Agent,把数据波动误判为人员态度问题。,每周选2个异常指标写原因树。,数据专员 / HRBP,2周,能区分口径问题、资源问题、执行问题。\r\n跨部门协同能力,售前、产品、财务、法务协同,能明确协同对象、交付物、截止时间和升级路径。,能沟通协调，但闭环记录不完整。,4,3,1,0.08,0.08,会议纪要、工作Agent闭环,问题被转发但没人负责。,所有跨部门事项用四要素记录。,业务负责人 / HRBP,2周,每个事项有负责人、动作、截止、验收。\r\n客户与伙伴关系管理能力,客户分层和伙伴分级,能区分重点客户、普通客户和风险客户。,关系维护有动作，经营分层不足。,4,3,1,0.08,0.08,客户清单、伙伴台账,资源平均分配，重点客户经营不足。,建立客户/伙伴四象限。,渠道/商务负责人,3周,能说明每类对象的维护频率和产出目标。\r\n风险合规意识,报价、合同、回款、伙伴异常,能提前识别合规红线并留痕。,能按流程做，但对异常预警敏感度不足。,4,2,2,0.08,0.16,合同审核、财务回款、异常群,私下承诺、逾期、渠道异常未升级。,建立风险清单和升级规则。,法务 / 财务 / HRBP,1个月,能识别并上报3类典型风险。\r\n团队管理与带教能力,任务分配、辅导、复盘,能带教新人和低绩效成员，推动团队结果。,能安排任务，辅导方法还不系统。,4,3,1,0.07,0.07,新人上手、关怀访谈、主管反馈,新人适应慢，低绩效反复。,做7天新人上手清单和月度辅导记录。,直属主管,2周,新人能按清单完成产品、流程、工具、客户观察。\r\n目标拆解与过程管理能力,周目标、日动作、过程检查,能把月目标拆成周计划和日动作。,有计划但缺少过程检查节点。,4,3,1,0.08,0.08,会议转写、日报、Agent任务,月底才发现缺口，纠偏太晚。,建立周一拆解、周三检查、周五复盘节奏。,业务负责人,2周,能持续两周输出目标-动作-结果闭环。\r\n复盘改进能力,原因树与机制沉淀,能把个案问题转成机制优化。,能总结现象，机制化沉淀不足。,4,2,2,0.06,0.12,周报、例会、管理输出,同类问题重复发生。,每月沉淀一个流程模板或检查清单。,HRBP / 业务负责人,1个月,形成可复用模板，并在下一轮业务中使用。\r\n", "ppt": "页码,标题,核心观点,页面布局建议,图表放置方式,配色建议,汇报话术,主页面/附录\r\n1,渠道与商务管理岗位分析：从职责到经营结果,管理岗价值不在汇报关系，而在把渠道供给、商务转化、合同回款和组织能力连成闭环。,左侧一句话结论，右侧放四个关键数字：商务8人、渠道13人、Agent39项、BI/Sheets/会议已接入。,KPI条 + 数据源标签,渠道绿色、商务金色、风控红色、战略蓝色,这页先告诉评委：我们不是画组织架构，而是画岗位如何驱动收入和风险闭环。,主页面\r\n2,信息架构：三张核心交付物如何回答评审问题,关系图回答谁和谁协作，逻辑图回答指标如何变动作，能力表回答谁能接岗位。,三栏卡片：上下游关系、指标业务价值、备岗能力差距。,三模块卡片,统一深色底 + 亮色描边,每个模块都对应一个管理问题，避免只讲HR理论。,主页面\r\n3,管理岗位上下游关系图,渠道和商务是双主线：渠道负责供给质量，商务负责客户转化和回款，两者通过商机流转和反馈闭环连接。,整页放Mermaid关系图，下方用3条解释强调信息流、业务流、反馈流。,Mermaid图居中，线条标签保留,渠道绿色、商务金色、支持灰色、外部紫色,请看中间两条主线，渠道不是只拉量，商务不是只签单，真正的管理节点在交接和反馈。,主页面\r\n4,指标—业务动作—组织价值逻辑图,每个指标必须落到岗位动作，否则指标只是看板数字。,左指标层，中动作层，右价值层；下方放指标表TOP6。,Mermaid逻辑图 + 摘要表,指标灰、动作绿/金、风险红、价值蓝,这张图用来证明我们理解了业务因果，而不是简单罗列KPI。,主页面\r\n5,关键指标表：从数据源到管理动作,将BI、Sheets、Telegram、会议转写、Agent闭环统一到同一张经营管理表。,表格分组显示：结果、渠道、协同、风险、组织。,主页面放8-10行，完整表放附录,表头深蓝，风险项红色标记,评审要看的不是指标多，而是每个指标是否能触发一个明确动作。,主页面+附录\r\n6,备岗人员能力差距评估,备岗不是名单，而是目标岗位要求、当前证据、差距得分、培养动作的闭环。,左侧评分规则，右侧能力差距表摘要；底部放公式。,评分规则卡 + 表格摘要,低分红、中分黄、高分绿,这张表能直接拿来评估渠道经理、商务经理或负责人备岗成熟度。,主页面\r\n7,样例人员培养计划,高差距项优先培养：报价合同、风险合规、复盘机制，而不是泛泛培训。,左能力雷达维度说明，右30/60/90天培养计划。,雷达图占左侧，行动清单占右侧,目标线蓝色，当前线橙色,我们用差距得分排序培养优先级，把管理发展变成可验收项目。,主页面\r\n8,可调整字段与落地路径,模板已能展示，但上线前需替换公司真实口径、岗位命名、阈值和审批规则。,四象限：组织字段、指标阈值、流程SLA、评分权重。,字段清单,中性灰 + 重点蓝,最后说明这不是一次性PPT，而是可以接入看板持续更新的管理工具。,附录\r\n"};
+  let editMode = false;
+  function initEditableAreas() {
+    const selectors = [
+      "header h1", "header .sub", "main h2", "main h3", "main p", "main li",
+      ".kpi span", ".kpi b", ".card", ".note", ".agenda .card"
+    ];
+    document.querySelectorAll(selectors.join(",")).forEach((el) => {
+      if (el.closest(".mermaid-wrap,.code-panel,.table-actions,.export-bar")) return;
+      if (el.closest("table")) return;
+      if (el.matches("a,button,textarea,code,script,style")) return;
+      if (el.querySelector("table,textarea,.mermaid")) return;
+      el.dataset.editable = "true";
+      el.setAttribute("contenteditable", "false");
+    });
+    document.querySelectorAll("table th").forEach((el) => {
+      el.dataset.tableEditable = "true";
+      el.setAttribute("contenteditable", "false");
+    });
+    document.querySelectorAll("[data-table-editable='true']").forEach((el) => {
+      el.setAttribute("contenteditable", "false");
+    });
+  }
+  function setEditStatus(text) {
+    const status = document.getElementById("edit-status");
+    if (status) status.innerText = text || "";
+  }
+  function toggleEditMode(force) {
+    editMode = typeof force === "boolean" ? force : !editMode;
+    document.body.classList.toggle("editing", editMode);
+    document.querySelectorAll("[data-editable='true'],[data-table-editable='true']").forEach((el) => {
+      el.setAttribute("contenteditable", editMode ? "true" : "false");
+    });
+    const btn = document.getElementById("edit-toggle");
+    if (btn) {
+      btn.classList.toggle("active", editMode);
+      btn.innerText = editMode ? "关闭编辑" : "开启编辑";
+    }
+    setEditStatus(editMode ? "可编辑" : "");
+  }
+  function markEdited() {
+    if (editMode) setEditStatus("已修改");
+  }
+  function escapeCsv(value) {
+    const text = String(value || "").replace(/\r?\n/g, " ").trim();
+    return /[",\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+  }
+  function tableToCsv(id) {
+    return Array.from(document.querySelectorAll("#" + id + " tr"))
+      .map((row) => Array.from(row.children).map((cell) => escapeCsv(cell.innerText)).join(","))
+      .join("\r\n");
+  }
+  function downloadBlob(text, filename, type) {
+    const blob = new Blob([text], { type: type || "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+  function decodeMermaidLabel(label) {
+    const div = document.createElement("div");
+    div.innerHTML = String(label || "").replace(/<br\s*\/?\s*>/gi, "\n");
+    return (div.textContent || div.innerText || "").trim();
+  }
+  function compactLabel(text) {
+    return String(text || "")
+      .replace(/<br\s*\/?\s*>/gi, "")
+      .replace(/&nbsp;/gi, "")
+      .replace(/[\s\u200b\u200c\u200d]+/g, "")
+      .trim();
+  }
+  function displayLabelToMermaid(text) {
+    return String(text || "")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .join("<br/>")
+      .replace(/"/g, "'");
+  }
+  function extractDiagramNodeText(target) {
+    const node = target.closest ? target.closest(".node") : null;
+    if (!node) return "";
+    const parts = Array.from(node.querySelectorAll("span,tspan,text"))
+      .map((el) => el.textContent)
+      .filter(Boolean);
+    return (parts.length ? parts.join("\n") : node.textContent || "").trim();
+  }
+  function findMermaidLabelMatch(source, clickedText) {
+    const clickedCompact = compactLabel(clickedText);
+    if (!clickedCompact) return null;
+    const pattern = /\["([^"]+)"\]/g;
+    let match;
+    while ((match = pattern.exec(source)) !== null) {
+      const label = match[1];
+      const labelCompact = compactLabel(decodeMermaidLabel(label));
+      if (!labelCompact) continue;
+      if (labelCompact === clickedCompact || clickedCompact.includes(labelCompact) || labelCompact.includes(clickedCompact)) {
+        return { start: match.index, end: pattern.lastIndex, label };
+      }
+    }
+    return null;
+  }
+  function bindDiagramEditors() {
+    document.querySelectorAll(".mermaid[data-code-id]").forEach((root) => {
+      if (root.dataset.nodeEditBound === "true") return;
+      root.dataset.nodeEditBound = "true";
+      root.addEventListener("dblclick", async (event) => {
+        if (!editMode) return;
+        const node = event.target.closest ? event.target.closest(".node") : null;
+        if (!node || !root.contains(node)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const codeEl = document.getElementById(root.dataset.codeId);
+        if (!codeEl) return;
+        const clickedText = extractDiagramNodeText(event.target);
+        const source = codeEl.value || "";
+        const found = findMermaidLabelMatch(source, clickedText);
+        if (!found) {
+          alert("这个节点没有匹配到 Mermaid 源码。请点下面“展开 Mermaid 源码”直接改。");
+          return;
+        }
+        const current = decodeMermaidLabel(found.label).replace(/\n+/g, "\n");
+        const next = window.prompt("修改节点文字；需要换行就直接回车。", current);
+        if (next === null) return;
+        const nextLabel = displayLabelToMermaid(next);
+        if (!nextLabel) return;
+        codeEl.value = source.slice(0, found.start) + '["' + nextLabel + '"]' + source.slice(found.end);
+        await renderMermaidFromTextarea(root.id, root.dataset.codeId);
+        setEditStatus("图已修改");
+      });
+    });
+  }
+  function enableDiagramEditing(diagramId) {
+    toggleEditMode(true);
+    bindDiagramEditors();
+    const root = document.getElementById(diagramId);
+    if (root) root.scrollIntoView({ block: "center", behavior: "smooth" });
+    setEditStatus("双击节点改字");
+  }
   async function copyText(id) {
     const el = document.getElementById(id);
     await navigator.clipboard.writeText(el.value || el.innerText || "");
+    setEditStatus("已复制");
   }
   async function copyCsv(id) {
-    const key = id === "metric-table" ? "metric" : (id === "capability-table" ? "capability" : "ppt");
-    await navigator.clipboard.writeText(csvData[key]);
+    await navigator.clipboard.writeText(tableToCsv(id));
+    setEditStatus("已复制");
+  }
+  function downloadTableCsv(id, filename) {
+    downloadBlob(tableToCsv(id), filename, "text/csv;charset=utf-8");
+    setEditStatus("已下载");
+  }
+  function downloadText(id, filename) {
+    const el = document.getElementById(id);
+    downloadBlob(el.value || el.innerText || "", filename, "text/plain;charset=utf-8");
+    setEditStatus("已下载");
+  }
+  async function renderMermaidFromTextarea(diagramId, codeId) {
+    const root = document.getElementById(diagramId);
+    const code = document.getElementById(codeId).value;
+    try {
+      const rendered = await mermaid.render(diagramId + "-edited-" + Date.now(), code);
+      root.innerHTML = rendered.svg;
+      root.dataset.source = code;
+      bindDiagramEditors();
+      setEditStatus("图已更新");
+    } catch (err) {
+      alert("Mermaid 源码有语法错误：" + (err && err.message ? err.message : err));
+    }
+  }
+  function downloadEditedHtml() {
+    const clone = document.documentElement.cloneNode(true);
+    const body = clone.querySelector("body");
+    if (body) body.classList.remove("editing");
+    const toggle = clone.querySelector("#edit-toggle");
+    if (toggle) {
+      toggle.classList.remove("active");
+      toggle.innerText = "开启编辑";
+    }
+    const status = clone.querySelector("#edit-status");
+    if (status) status.innerText = "";
+    clone.querySelectorAll("[contenteditable]").forEach((el) => el.setAttribute("contenteditable", "false"));
+    const html = "<!doctype html>\n" + clone.outerHTML;
+    downloadBlob(html, "channel_business_role_analysis_edited.html", "text/html;charset=utf-8");
+    setEditStatus("已下载");
   }
   function downloadSvg(id, filename) {
     const root = document.getElementById(id);
@@ -415,6 +625,9 @@
     a.remove();
     URL.revokeObjectURL(url);
   }
+  initEditableAreas();
+  setTimeout(bindDiagramEditors, 800);
+  document.addEventListener("input", markEdited);
 </script>
 </body>
 </html>
